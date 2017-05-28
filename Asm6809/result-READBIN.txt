@@ -1,0 +1,206 @@
+                      (      READBIN.ASM):00001                     pragma newsource
+                      (      READBIN.ASM):00002                     opt 6809
+                      (      READBIN.ASM):00003                     opt cd      
+                      (      READBIN.ASM):00004                     
+                      (      READBIN.ASM):00021                                 
+                      (      READBIN.ASM):00022                     org $2DD+8 ;$1DA 741
+                      (      READBIN.ASM):00023                     
+                      (      READBIN.ASM):00024         ; ***** Setup DP to I/O and prepare for casette 1bit input ******                   
+02E5 C67E             (      READBIN.ASM):00025 [2]     BEGIN:      ldb #$7E
+02E7 F70176           (      READBIN.ASM):00026 [5]                 stb >$176
+02EA 6A6B             (      READBIN.ASM):00027 [6+1]               dec 11,S
+                      (      READBIN.ASM):00028         
+02EC 10FF03FE         (      READBIN.ASM):00029 [7]                 sts >pNewStack+cOldStack
+02F0 10CE03FB         (      READBIN.ASM):00030 [4]                 lds #pNewStack
+                      (      READBIN.ASM):00031                     
+02F4 86FF             (      READBIN.ASM):00032 [2]                 lda #$FF
+02F6 1F8B             (      READBIN.ASM):00033 [6]                 tfr A,DP                            ; DP = 0xFF??
+     FF               (      READBIN.ASM):00034                     SETDP $FF
+02F8 1A50             (      READBIN.ASM):00035 [3]                 orcc #(cFirqMask|cIrqMask)          ; Disable Interrupts   ; Disable IRQs
+                      (      READBIN.ASM):00036                                 
+02FA 9601             (      READBIN.ASM):00037 [4]                 lda <$01                            ;
+02FC D603             (      READBIN.ASM):00038 [4]                 ldb <$03                            ;           
+02FE ED61             (      READBIN.ASM):00039 [5+1]               std cIoState,S                      ; store I/O changes to restore later
+0300 8477             (      READBIN.ASM):00040 [2]                 anda #(^cHState)                    ; Disable Hsync Interrupt / Clear Flag          
+0302 8A08             (      READBIN.ASM):00041 [2]                 ora  #(R01_MuxSelLSB)               ; (Sound Source Cassette)
+0304 9701             (      READBIN.ASM):00042 [4]                 sta <$01                            ; (Sound Source cassette)           
+0306 C477             (      READBIN.ASM):00043 [2]                 andb #(^cVState)                    ; Disable Vsync Interrupt / Clear Flag
+                      (      READBIN.ASM):00044                     ;orb  #(R03_VsyncIrq)
+0308 D703             (      READBIN.ASM):00045 [4]                 stb <$03                            ; 
+                      (      READBIN.ASM):00046                     
+030A C63C             (      READBIN.ASM):00047 [2]                 ldb #$3C                            ; default BITS and MOTOR ON
+030C E765             (      READBIN.ASM):00048 [4+1]               stb cIndicator,S                    ; show that on the left/top of the screen
+030E D721             (      READBIN.ASM):00049 [4]                 stb <$21                            ; and perform the action sending to 0xFF21
+                      (      READBIN.ASM):00050                                             
+0310                  (      READBIN.ASM):00051         RESYNC:     ;synchronize signal and jump to "MAIN"
+                      (      READBIN.ASM):00052                     
+                      (      READBIN.ASM):00053                     include syncup.asm
+                      (       syncup.asm):00001         
+                      (       syncup.asm):00002         ; **************************************************
+                      (       syncup.asm):00003         ; **************** Initial Sync UP *****************
+                      (       syncup.asm):00004         ; **************************************************                    
+0310 6FE4             (       syncup.asm):00005 [6+0]   SYNCUP:     clr ,S                              ;~06     reset sync state
+                      (       syncup.asm):00006         ;==============================================================================
+0312 8D44             (       syncup.asm):00007 [7]     @RELOOP:    bsr GETBYTE                         ;~07|58 ? go sync       
+                      (       syncup.asm):00008         ;>>>>>>>>>>>>> RTS here at cycle 23... must BSR at cycle 58 <<<<<<<<<<<<<<
+0314                  (       syncup.asm):00009         @BYTECHK:   
+0314 C14B             (       syncup.asm):00010 [2]                 cmpb #$4B                           ;~02|25 $4B
+0316 270C             (       syncup.asm):00011 [3]                 beq @STAGEA28                       ;~03|28 if char is 4B Assert Stage A            
+0318 5D               (       syncup.asm):00012 [2]                 tstb                                ;~02|30 $00
+0319 2711             (       syncup.asm):00013 [3]                 beq @STAGEB33                       ;~03|33 if char is 00 Check/Try Stage B         
+031B 5C               (       syncup.asm):00014 [2]                 incb                                ;~02|35 $FF
+031C 26F2             (       syncup.asm):00015 [3]                 bne SYNCUP                          ;~03|38 if char is FF Check/Try Stage C         
+                      (       syncup.asm):00016         ;;
+031E 6D60             (       syncup.asm):00017 [6+1]   @STAGEC38:  tst 0,S                             ;~07|45 check state     
+0320 2A10             (       syncup.asm):00018 [3]                 bpl @REUSE48                        ;~03|48 positive? then can't proceed
+0322 205B             (       syncup.asm):00019 [3]                 bra MAIN                            ;~03|51 after sync, NEXT STAGE OF PROGRAM
+0324 6D60             (       syncup.asm):00020 [6+1]   @STAGEA28:  tst 0,S                             ;~07|35 check state
+0326 260C             (       syncup.asm):00021 [3]                 bne @SYNCW38                        ;~03|38 non zero than already Stage A
+0328 6C60             (       syncup.asm):00022 [6+1]               inc 0,S                             ;~07|45 Set state to Stage B (01)
+032A 2006             (       syncup.asm):00023 [3]                 bra @REUSE48                        ;~03|48 and go read next byte
+                      (       syncup.asm):00024         ;;
+032C 6DE4             (       syncup.asm):00025 [6+0]   @STAGEB33:  tst ,S                              ;~06|39 check state
+032E 2F06             (       syncup.asm):00026 [3]                 ble @SYNCW42                        ;~03|42 zero? negative? then can't proceed      
+0330 60E4             (       syncup.asm):00027 [6+0]               neg ,S                              ;~06|48 Set state to Stage C (FF)
+0332 20DE             (       syncup.asm):00028 [3]     @REUSE48:   bra @RELOOP                         ;~03|51 and go read next byte
+                      (       syncup.asm):00029         ;;
+0334 32E4             (       syncup.asm):00030 [4+0]   @SYNCW38:   leas ,S                             ;~04|42 delay till cycle 42
+0336 21FE             (       syncup.asm):00031 [3]     @SYNCW42:   brn @SYNCW42                        ;~03|45 + 
+0338 20F8             (       syncup.asm):00032 [3]                 bra @REUSE48                        ;~03|48 > Go Read next byte
+                      (       syncup.asm):00033         
+                      (       syncup.asm):00034         ;==============================================================================
+033A 2B10             (       syncup.asm):00035 [3]     GETSYNCBIT: bmi @IS1                            ;~03|56
+                      (       syncup.asm):00036         ;;
+033C 8601             (       syncup.asm):00037 [2]     @IS0:       lda #1                              ;~02|58 load bit comparator
+033E 9520             (       syncup.asm):00038 [4]     @RE0:       bita <$20                           ;~04|04 read 1st sample
+0340 27FC             (       syncup.asm):00039 [3]                 beq @RE0                            ;~03|07 it's 0? then not new sample 
+0342 9520             (       syncup.asm):00040 [4]                 bita <$20                           ;~04|11 read 2nd sample
+0344 27F8             (       syncup.asm):00041 [3]                 beq @RE0                            ;~03|14 it's still 1? then new sample :)
+0346 21F6             (       syncup.asm):00042 [3]                 brn @RE0                            ;~03|17 never...
+                      (       syncup.asm):00043         ;;          
+0348 F800AA           (       syncup.asm):00044 [5]     @RETBYTE:   eorb $AA                            ;~02|19 [Self-Mod] TSTA/COMA        
+034B 39               (       syncup.asm):00045 [5]                 rts                                 ;~05|24 return byte to program
+                      (       syncup.asm):00046         ;;
+034C 8601             (       syncup.asm):00047 [2]     @IS1:       lda #1                              ;~02|58 load bit comparator
+034E 9520             (       syncup.asm):00048 [4]     @RE1:       bita <$20                           ;~04|04 read 1st sample
+0350 26FC             (       syncup.asm):00049 [3]                 bne @RE1                            ;~03|07 it's 1? then not new sample 
+0352 9520             (       syncup.asm):00050 [4]                 bita <$20                           ;~04|11 read 2nd sample
+0354 26F8             (       syncup.asm):00051 [3]                 bne @RE1                            ;~03|14 it's still 0? then new sample :)
+0356 20F0             (       syncup.asm):00052 [3]                 bra @RETBYTE                        ;~03|17
+                      (       syncup.asm):00053                     
+                      (       syncup.asm):00054         ; ===============================================================================================
+0358 C680             (       syncup.asm):00055 [2]     GETBYTE:    ldb #128                            ;~02|02 holds byte and rotate signal
+035A 9620             (       syncup.asm):00056 [4]     @GETBIT:    lda <$20                            ;~04|06 read 1st sample
+035C 8401             (       syncup.asm):00057 [2]                 anda #1                             ;~02|08 add carry to sum
+                      (       syncup.asm):00058         ;;
+035E 12               (       syncup.asm):00059 [2]                 nop                                 ;~02|10
+035F 0420             (       syncup.asm):00060 [6]                 lsr <$20                            ;~06|16 read 2nd sample
+0361 8900             (       syncup.asm):00061 [2]                 adca #0                             ;~02|18
+                      (       syncup.asm):00062                     ;tst D,S
+                      (       syncup.asm):00063         ;;
+0363 12               (       syncup.asm):00064 [2]                 nop                                 ;~02|20
+0364 0420             (       syncup.asm):00065 [6]                 lsr <$20                            ;~06|26 read 3rd sample 
+0366 8900             (       syncup.asm):00066 [2]                 adca #0                             ;~02|28
+                      (       syncup.asm):00067         ;;
+0368 12               (       syncup.asm):00068 [2]                 nop                                 ;~02|30
+0369 0420             (       syncup.asm):00069 [6]                 lsr <$20                            ;~06|36 read 4th sample
+036B 8900             (       syncup.asm):00070 [2]                 adca #0                             ;~02|38 add carry to sum
+                      (       syncup.asm):00071                     ;tst D,S
+                      (       syncup.asm):00072                     ;;
+036D 12               (       syncup.asm):00073 [2]                 nop                                 ;~02|40
+036E 0420             (       syncup.asm):00074 [6]                 lsr <$20                            ;~06|46 read 5rd sample
+0370 89FD             (       syncup.asm):00075 [2]                 adca #253                           ;~02|48 add carry to sum
+0372 56               (       syncup.asm):00076 [2]                 rorb                                ;~02|50 rotate into byte buffer
+0373 25C5             (       syncup.asm):00077 [3]                 bcs GETSYNCBIT                      ;~03|53 rotated 8 bits? then go sync
+                      (       syncup.asm):00078         ;;
+0375 1F00             (       syncup.asm):00079 [6]                 tfr D,D                             ;~06|59
+0377 20E1             (       syncup.asm):00080 [3]                 bra @GETBIT                         ;~03|62 > go read next bit
+                      (       syncup.asm):00081                     
+                      (      READBIN.ASM):00054                     ;first thing must be a "bsr GETBYTE"            
+                      (      READBIN.ASM):00055                     ;must repeat the "bsr" at cycle 28   
+                      (      READBIN.ASM):00056         
+                      (      READBIN.ASM):00057         ; ******** in Sync can start reading bytes *********
+                      (      READBIN.ASM):00058         ;RESYNC1:   bra RESYNC
+                      (      READBIN.ASM):00059         
+0379 3A               (      READBIN.ASM):00060 [3]     @GETBYTEX:  abx                                 ;~03|15 add last byte to checksum
+037A 3D               (      READBIN.ASM):00061 [11]                mul                                 ;~11|26 +
+037B 1F00             (      READBIN.ASM):00062 [6]                 tfr D,D                             ;~06|32 > sync to 28+4
+037D 20D9             (      READBIN.ASM):00063 [3]                 bra GETBYTE                         ;~03|00 next byte and return to caller
+037F 8DD7             (      READBIN.ASM):00064 [7]     MAIN:       bsr GETBYTE                         ;~07|00 ---- first byte
+                      (      READBIN.ASM):00065         ;; =============================================================================================            
+0381 C101             (      READBIN.ASM):00066 [2]                 cmpb #1                             ;~02|02 option is 0 or 1?
+0383 228B             (      READBIN.ASM):00067 [3]                 bhi RESYNC                          ;~03|05 no? then go resync
+0385 8E0000           (      READBIN.ASM):00068 [3]                 ldx #0                              ;~03|08 X storing checksum
+0388 E7E4             (      READBIN.ASM):00069 [4+0]               stb cScratch,S                      ;~04|12 store command on stack
+038A 3A               (      READBIN.ASM):00070 [3]                 abx                                 ;~03|15 add to header checksum
+038B 12               (      READBIN.ASM):00071 [2]                 nop                                 ;~02|17 +
+038C 3D               (      READBIN.ASM):00072 [11]                mul                                 ;~11|28 > sync to 28
+038D 8DC9             (      READBIN.ASM):00073 [7]                 bsr GETBYTE                         ;~07|00 ---- second byte
+                      (      READBIN.ASM):00074         ;; =============================================================================================            
+038F E78C19           (      READBIN.ASM):00075 [4+1]               stb @AMOUNT+2,PCR                   ;~05|05 set MSB of size (or none)   
+0392 8DE5             (      READBIN.ASM):00076 [7]                 bsr @GETBYTEX                       ;~07|00 07+13 > then get new byte
+                      (      READBIN.ASM):00077         ;; =============================================================================================                        
+0394 E78C15           (      READBIN.ASM):00078 [4+1]               stb @AMOUNT+3,PCR                   ;~05|05 set LSB of size (or none)   
+0397 8DE0             (      READBIN.ASM):00079 [7]                 bsr @GETBYTEX                       ;~07|00 07+13 > then get new byte
+                      (      READBIN.ASM):00080         ;; =============================================================================================
+0399 E78C12           (      READBIN.ASM):00081 [4+1]               stb @ADDR+1,PCR                     ;~05|05 set MSB of address (or none)            
+039C 8DDB             (      READBIN.ASM):00082 [7]                 bsr @GETBYTEX                       ;~07|00 07+13 > then get new byte
+                      (      READBIN.ASM):00083         ;; =============================================================================================                        
+039E E78C0E           (      READBIN.ASM):00084 [4+1]               stb @ADDR+2,PCR                     ;~05|05 set LSB of address (or none)            
+03A1 8DD6             (      READBIN.ASM):00085 [7]                 bsr @GETBYTEX                       ;~07|00 07+13 > then get new byte
+                      (      READBIN.ASM):00086         ;; =============================================================================================
+03A3 3A               (      READBIN.ASM):00087 [3]                 abx                                 ;~03|03 add checksum to x
+03A4 1F10             (      READBIN.ASM):00088 [6]                 tfr X,D                             ;~06|09 now B should be 0
+03A6 5D               (      READBIN.ASM):00089 [2]                 tstb                                ;~02|11 is B=0?
+03A7 2620             (      READBIN.ASM):00090 [3]                 bne FNERR                           ;~03|14 no? then checksum error...
+03A9 108E0000         (      READBIN.ASM):00091 [4]     @AMOUNT:    ldy #0                              ;~04|18 how much bytes to read
+03AD CE0000           (      READBIN.ASM):00092 [3]     @ADDR:      ldu #0                              ;~03|21 where to read?
+03B0 E6E4             (      READBIN.ASM):00093 [4+0]               ldb cScratch,S                      ;~04|25 option was 0 or 1?
+03B2 2719             (      READBIN.ASM):00094 [3]                 beq FNEOF                           ;~03|28 0? then load complete
+03B4 8DA2             (      READBIN.ASM):00095 [7]     @NEXTBYTE:  bsr GETBYTE                         ;~07|00 get data byte
+                      (      READBIN.ASM):00096         ;; =============================================================================================
+03B6 3A               (      READBIN.ASM):00097 [3]                 abx                                 ;~03|03 add it to checksum
+03B7 E7C0             (      READBIN.ASM):00098 [4+2]               stb ,U+                             ;~06|09 store received byte
+03B9 3D               (      READBIN.ASM):00099 [11]                mul                                 ;~11|20 > delay 11 cycles
+                      (      READBIN.ASM):00100                     ;inc 3,S>$402
+                      (      READBIN.ASM):00101                     ;leax ,X
+03BA 313F             (      READBIN.ASM):00102 [4+1]               leay -1,Y                           ;~05|25 one byte stored
+03BC 26F6             (      READBIN.ASM):00103 [3]                 bne @NEXTBYTE                       ;~03|28 go get another byte
+03BE 8D98             (      READBIN.ASM):00104 [7]                 bsr GETBYTE                         ;~07|00 get data checksum byte
+                      (      READBIN.ASM):00105         ;; =============================================================================================
+03C0 3A               (      READBIN.ASM):00106 [3]                 abx                                 ;~03|03 add checksum to x
+03C1 1F10             (      READBIN.ASM):00107 [6]                 tfr X,D                             ;~06|09 now B should be
+03C3 5D               (      READBIN.ASM):00108 [2]                 tstb                                ;~02|11 is B=0?
+03C4 2603             (      READBIN.ASM):00109 [3]                 bne FNERR                           ;~03|14 no? then checksum error...
+                      (      READBIN.ASM):00110                     
+                      (      READBIN.ASM):00111                     ;ldb cIndicator,S                    ;~05|19
+                      (      READBIN.ASM):00112                     ;eorb #64                            ;~02|21
+                      (      READBIN.ASM):00113                     ;stb cIndicator,S                    ;~05|26
+                      (      READBIN.ASM):00114                     
+                      (      READBIN.ASM):00115                     ;com >$400                          ;~07|21 invert indicator
+                      (      READBIN.ASM):00116                     
+03C6 3D               (      READBIN.ASM):00117 [11]                mul                                 ;~11|25     
+                      (      READBIN.ASM):00118                     
+                      (      READBIN.ASM):00119                     ;bra RESYNC1                        ;~03|24 another sync for another command
+                      (      READBIN.ASM):00120                     
+                      (      READBIN.ASM):00121                     ;leax ,X                            ;~04|25     
+03C7 20B6             (      READBIN.ASM):00122 [3]                 bra MAIN                            ;~03|28
+                      (      READBIN.ASM):00123         
+                      (      READBIN.ASM):00124         ;; =============================================================================================                        
+03C9 8645             (      READBIN.ASM):00125 [2]     FNERR:      lda #69                             ;       A = "E"rror
+03CB ED65             (      READBIN.ASM):00126 [5+1]               std cIndicator,S                    ;       store on screen and finish  
+03CD EC61             (      READBIN.ASM):00127 [5+1]   FNEOF:      ldd cIoState,S                      ;       original I/O
+03CF 10EE63           (      READBIN.ASM):00128 [6+1]   ORGSTK:     lds cOldStack,S                     ;       original stack
+03D2 9701             (      READBIN.ASM):00129 [4]                 sta <$01                            ;       store part A
+03D4 D703             (      READBIN.ASM):00130 [4]                 stb <$03                            ;       store Part B    
+03D6 C634             (      READBIN.ASM):00131 [2]                 ldb #$34                            ;       "default bits an MOTOR OFF" 
+03D8 D721             (      READBIN.ASM):00132 [4]                 stb <$21                            ;       on 0xFF21
+03DA 3B               (      READBIN.ASM):00133 [6+?]               rti                                 ;       restore changed registers and return    
+                      (      READBIN.ASM):00134                     
+                      (      READBIN.ASM):00135                     org $106                            ; auto-run
+0106 7E02E5           (      READBIN.ASM):00136 [4]                 jmp BEGIN
+                      (      READBIN.ASM):00137                     
+                      (      READBIN.ASM):00138                     org $176
+0176 3F               (      READBIN.ASM):00139 [19]                swi
+                      (      READBIN.ASM):00140                                 
+                      (      READBIN.ASM):00141                     end BEGIN

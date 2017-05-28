@@ -1,0 +1,123 @@
+                      (       decomp.ASM):00001                     pragma newsource
+                      (       decomp.ASM):00002                     opt 6809
+                      (       decomp.ASM):00003                     opt cd      
+                      (       decomp.ASM):00004                     
+                      (       decomp.ASM):00009                                 
+                      (       decomp.ASM):00010                     org $1DA ;$2DD+8 ;$1DA 741
+                      (       decomp.ASM):00011         
+                      (       decomp.ASM):00012         ; Methods
+                      (       decomp.ASM):00013         ; 0 = Size Raw bytes
+                      (       decomp.ASM):00014         ;     (if Size=0 then Size=Parm1+64 bytes...)
+                      (       decomp.ASM):00015         ; 1 = RLE (repeat Parm1 bytes Size times)
+                      (       decomp.ASM):00016         ; 2 = Window (copy from offset -Parm1... Size bytes)
+                      (       decomp.ASM):00017         ; 3 = Window2 (copy form offset -(Parm1|Parm2)... Size bytes)
+                      (       decomp.ASM):00018         
+01DA                  (       decomp.ASM):00019         BEGIN:      ;pshs CC
+                      (       decomp.ASM):00020                     ;orcc #$50
+                      (       decomp.ASM):00021                     ;ldy #pData     ; Y = pointer to compressed block
+                      (       decomp.ASM):00022                     ;sts @OrgS+2, PCR ; save current S
+                      (       decomp.ASM):00023                     ;lds #3584      ; S = pointer to target memory  
+01DA 10EF8D00AE       (       decomp.ASM):00024 [6+5]               sts @OrgS+2, PCR
+01DF 108EAAAA         (       decomp.ASM):00025 [4]                 ldy #$AAAA  
+01E3 10CEAAAA         (       decomp.ASM):00026 [4]                 lds #$AAAA
+01E7 ECA1             (       decomp.ASM):00027 [5+3]   @NXBYTE:    ldd ,Y++       ; B = size6|method2 A = parm/data
+01E9 44               (       decomp.ASM):00028 [2]                 lsra           ; method is... 0,2 or 1,3?
+01EA 255C             (       decomp.ASM):00029 [3]                 bcs @Method13
+01EC 44               (       decomp.ASM):00030 [2]     @Method02:  lsra           ; method is 0 or 2?
+01ED 253D             (       decomp.ASM):00031 [3]                 bcs @Method2
+                      (       decomp.ASM):00032         ;; ===========================================================================
+01EF 271A             (       decomp.ASM):00033 [3]     @Method0:   beq @Raw16
+                      (       decomp.ASM):00034         ;; ===========================================================================
+01F1 E7E0             (       decomp.ASM):00035 [4+2]   @Raw8:      stb ,S+        ; Parm1 was already first byte
+01F3 4A               (       decomp.ASM):00036 [2]                 deca           ; one byte read
+01F4 27F1             (       decomp.ASM):00037 [3]                 beq @NXBYTE    ; yes? then go read next block
+01F6 8501             (       decomp.ASM):00038 [2]                 bita #1        ; remaining is odd or even?
+01F8 2707             (       decomp.ASM):00039 [3]                 beq @Raw8NX    ; even? so read in words         
+01FA E6A0             (       decomp.ASM):00040 [4+2]               ldb ,Y+        ; load the odd byte
+01FC E7E0             (       decomp.ASM):00041 [4+2]               stb ,S+        ; store the odd byte
+01FE 4A               (       decomp.ASM):00042 [2]                 deca           ; a byte copied, there's more?
+01FF 27E6             (       decomp.ASM):00043 [3]                 beq @NXBYTE    ; no? then go read next block
+0201 EEA1             (       decomp.ASM):00044 [5+3]   @Raw8NX:    ldu ,Y++       ; load a word
+0203 EFE1             (       decomp.ASM):00045 [5+3]               stu ,S++       ; store a word
+0205 8002             (       decomp.ASM):00046 [2]                 suba #2        ; 1 word copied, there's more?
+0207 26F8             (       decomp.ASM):00047 [3]                 bne @Raw8NX    ; yes? then go read it
+0209 20DC             (       decomp.ASM):00048 [3]                 bra @NXBYTE    ; no? then go read next block
+                      (       decomp.ASM):00049         ;; ===========================================================================
+020B 8620             (       decomp.ASM):00050 [2]     @Raw16:     lda #32        ; size is B+64 (so loading first 32 words)
+020D EEA1             (       decomp.ASM):00051 [5+3]   @Raw16NXA:  ldu ,Y++       ; load a word
+020F EFE1             (       decomp.ASM):00052 [5+3]               stu ,S++       ; store a word
+0211 4A               (       decomp.ASM):00053 [2]                 deca           ; a word copied
+0212 26F9             (       decomp.ASM):00054 [3]                 bne @Raw16NXA  ; continue until all 32 words are copied
+0214 5D               (       decomp.ASM):00055 [2]                 tstb           ; size was exactly 64?
+0215 27D0             (       decomp.ASM):00056 [3]                 beq @NXBYTE    ; yes? then go read next block
+0217 C501             (       decomp.ASM):00057 [2]                 bitb #1        ; remaining is odd or even?
+0219 2707             (       decomp.ASM):00058 [3]                 beq @Raw16NXB  ; even so read in words
+021B A6A0             (       decomp.ASM):00059 [4+2]               lda ,Y+        ; load a byte
+021D A7E0             (       decomp.ASM):00060 [4+2]               sta ,S+        ; store a byte
+021F 5A               (       decomp.ASM):00061 [2]                 decb           ; a byte copied, there's more?
+0220 27C5             (       decomp.ASM):00062 [3]                 beq @NXBYTE    ; no? then go read next block
+0222 EEA1             (       decomp.ASM):00063 [5+3]   @Raw16NXB:  ldu ,Y++       ; load a byte
+0224 EFE1             (       decomp.ASM):00064 [5+3]               stu ,S++       ; store a byte
+0226 C002             (       decomp.ASM):00065 [2]                 subb #2        ; 1 word copied, there's more?
+0228 26F8             (       decomp.ASM):00066 [3]                 bne @Raw16NXB  ; continue until all bytes are copied
+022A 20BB             (       decomp.ASM):00067 [3]                 bra @NXBYTE    ; and go read next block
+                      (       decomp.ASM):00068         ;; ===========================================================================
+022C E78C03           (       decomp.ASM):00069 [4+1]   @Method2:   stb <@WndDiff+3,PCR ;store window offset on self-modified leau -xx, X
+022F 33E9FFFF         (       decomp.ASM):00070 [4+4]   @WndDiff:   leau >-1, S    ; U = S-offset
+0233 8501             (       decomp.ASM):00071 [2]     @WndStart:  bita #1        ; remaining is odd or even?
+0235 2707             (       decomp.ASM):00072 [3]                 beq @WndNX     ; even? so copy in words
+0237 E6C0             (       decomp.ASM):00073 [4+2]               ldb ,U+        ; load a byte
+0239 E7E0             (       decomp.ASM):00074 [4+2]               stb ,S+        ; store a byte
+023B 4A               (       decomp.ASM):00075 [2]                 deca           ; a byte copied, there's more?
+023C 27A9             (       decomp.ASM):00076 [3]                 beq @NXBYTE    ; no? then go read next block
+023E AEC1             (       decomp.ASM):00077 [5+3]   @WndNX:     ldx ,U++       ; read a word
+0240 AFE1             (       decomp.ASM):00078 [5+3]               stx ,S++       ; store a word
+0242 8002             (       decomp.ASM):00079 [2]                 suba #2        ; 1 word copied, there's more?
+0244 26F8             (       decomp.ASM):00080 [3]                 bne @WndNX     ; continue until all bytes are copied
+0246 209F             (       decomp.ASM):00081 [3]                 bra @NXBYTE    ; and go read next block
+                      (       decomp.ASM):00082         ;; ===========================================================================
+0248 44               (       decomp.ASM):00083 [2]     @Method13:  lsra           ; method is 1 or 3?
+0249 251A             (       decomp.ASM):00084 [3]                 bcs @Method3
+                      (       decomp.ASM):00085         ;; ===========================================================================
+024B 2723             (       decomp.ASM):00086 [3]     @Method1:   beq @Done      ; if RLE size is 0... then encoding is done  
+024D 8501             (       decomp.ASM):00087 [2]                 bita #1        ; remaining is odd or even?
+024F 2705             (       decomp.ASM):00088 [3]                 beq @Rle16     ; even? so copy in words
+0251 E7E0             (       decomp.ASM):00089 [4+2]               stb ,S+        ; store byte
+0253 4A               (       decomp.ASM):00090 [2]                 deca           ; a byte was filled, there's more?
+0254 2791             (       decomp.ASM):00091 [3]                 beq @NXBYTE    ; no? then go read next block
+0256 E78C01           (       decomp.ASM):00092 [4+1]   @Rle16:     stb @RleH+1,PCR; store B on high byte of self-mod load X
+0259 8E0000           (       decomp.ASM):00093 [3]     @RleH:      ldx #$0000     ; X = B|0
+025C 3A               (       decomp.ASM):00094 [3]                 abx            ; X += B
+025D AFE1             (       decomp.ASM):00095 [5+3]   @RleNx:     stx ,S++       ; store a word
+025F 8002             (       decomp.ASM):00096 [2]                 suba #2        ; 1 word stored, there's more?
+0261 26FA             (       decomp.ASM):00097 [3]                 bne @RleNx     ; continue while there's more
+0263 2082             (       decomp.ASM):00098 [3]                 bra @NXBYTE    ; and go read next block
+                      (       decomp.ASM):00099         ;; ===========================================================================
+0265 A78C05           (       decomp.ASM):00100 [4+1]   @Method3:   sta <@M3A+1,PCR ; Store old A for later recover
+0268 A6A0             (       decomp.ASM):00101 [4+2]               lda ,Y+        ; A = MSB of offset
+026A 33EB             (       decomp.ASM):00102 [4+4]               leau D, S      ; U = S-offset16
+026C 8600             (       decomp.ASM):00103 [2]     @M3A:       lda #0         ; reload old A
+026E 20C3             (       decomp.ASM):00104 [3]                 bra @WndStart  ; go copy bytes
+                      (       decomp.ASM):00105         ;; ===========================================================================
+0270 8E5555           (       decomp.ASM):00106 [3]     @Done:      ldx #$5555
+0273 CE5555           (       decomp.ASM):00107 [3]                 ldu #$5555
+0276 8655             (       decomp.ASM):00108 [2]                 lda #$55
+0278 AFE1             (       decomp.ASM):00109 [5+3]               stx ,S++
+027A EFE1             (       decomp.ASM):00110 [5+3]               stu ,S++    
+027C A7E0             (       decomp.ASM):00111 [4+2]               sta ,S+
+027E CE6666           (       decomp.ASM):00112 [3]                 ldu #$6666
+0281 CC6666           (       decomp.ASM):00113 [3]                 ldd #$6666
+0284 8E7777           (       decomp.ASM):00114 [3]                 ldx #$7777
+0287 EF84             (       decomp.ASM):00115 [5+0]               stu ,X
+0289 ED02             (       decomp.ASM):00116 [5+1]               std 2,X                 
+028B 10CE0000         (       decomp.ASM):00117 [4]     @OrgS:      lds #0
+028F 6E84             (       decomp.ASM):00118 [3+0]               jmp ,X
+                      (       decomp.ASM):00119                     ;puls CC
+0291                  (       decomp.ASM):00120         @Lock:      ;rts ;bra @Lock
+                      (       decomp.ASM):00121         
+                      (       decomp.ASM):00122                     ;org 26000
+0291                  (       decomp.ASM):00123         pData:      
+                      (       decomp.ASM):00124                     ;includebin "irc.pix.rlx"
+                      (       decomp.ASM):00125                     ;includebin "racobin.pix.rlx"
+                      (       decomp.ASM):00126         
+                      (       decomp.ASM):00127                     end BEGIN   
