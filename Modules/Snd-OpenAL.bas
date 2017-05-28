@@ -2,16 +2,13 @@
 #include "AL/alc.bi"
 #include "AL/alext.bi"
 
-#undef AL_FORMAT_QUAD16
-
 #ifndef AL_FORMAT_QUAD16  
   const AL_FORMAT_QUAD16 = &h1205
   #print "no QUAD16 extension found on headers... (back speaker may not work)"  
-#endif
-  
+#endif 
 
 type WaveOutStruct
-  dwMagic as ulong  'cvi("WvOS")
+  dwMagic as ulong  'cvl("WvOS")
   hWave as ALCdevice ptr
   iBuffers as long  
   iCurBuf as long  
@@ -27,6 +24,12 @@ type WaveOutStruct
   iBufferCount as long
 end type  
 
+function int_alGetError() as ALenum
+  var iResu = alGetError()
+  if iResu = AL_INVALID_OPERATION then return AL_NO_ERROR
+  return iResu
+end function
+
 function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as integer = 2, iBuffers as integer = 2, iDevice as integer=-1) as WaveOutStruct ptr
   
   dim as ALenum iSamFmt
@@ -41,7 +44,7 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
       'print *pDev
       pDev += len(*pDev)+1: iNum += 1      
     wend
-    if pDevice = 0 then return 0
+    if pDevice = 0 then print "OpenAL: device " & iDevice & " not found":return 0
   end if
   
   do
@@ -56,31 +59,31 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
     case else: return 0
     end select
         
-    if iBits <> 8 and iBits <> 16 then return 0
-    if cuint(iBuffers-1) > 255 then return 0
+    if iBits <> 8 and iBits <> 16 then print "OpenAL: invalid bitsize " & iBits:return 0
+    if cuint(iBuffers-1) > 255 then print "OpenAL: invalid buffer count" & iBuffers: return 0
     pResult = cptr( WaveOutStruct ptr , callocate(sizeof(WaveOutStruct)) )
-    if pResult = 0 then return 0
+    if pResult = 0 then print "OpenAL: failed to allocate WaveOut structure": return 0
     
     with *pResult
       dim as ALCint iFreq, iParms(...) = {ALC_FREQUENCY, iHz, 0, 0}
       .hWave = alcOpenDevice(0)
-      if .hWave = 0 then exit do
-      .pContext = alcCreateContext( .hWave , @iParms(0) )      
-      if .pContext = 0 orelse alGetError() then exit do
+      if .hWave = 0 then print "OpenAL: failed to open device":exit do
+      .pContext = alcCreateContext( .hWave , 0 ) '@iParms(0) )      
+      if .pContext = 0 orelse int_alGetError() then print "OpenAL: failed to create context.":exit do
       alcMakeContextCurrent(.pContext)      
-      if alGetError() then .pContext=0: exit do
+      if int_alGetError() then .pContext=0: print "OpenAL: failed to make context current.": exit do
       alcGetIntegerv( .hWave , ALC_FREQUENCY , sizeof(iFreq), @iFreq )
-      if alGetError() then exit do
-      if iFreq < iHz then exit do
+      if int_alGetError() then print "OpenAL: failed to get base frequency": exit do
+      if iFreq < iHz then print "OpenAL: requested frequency of " & iHz & " is bigger than base " & iFreq:exit do
       .piBuffers = callocate(sizeof(aluint)*iBuffers)
-      if .piBuffers = 0 then exit do
+      if .piBuffers = 0 then print "OpenAL: failed to allocate buffers" :exit do
       .pTempBuff = callocate( 65536 )    
-      if .pTempBuff = 0 then exit do
+      if .pTempBuff = 0 then print "OpenAL: failed to allocate auxiliar buffer space": exit do
       alGenBuffers( iBuffers , .piBuffers )
-      if alGetError() then exit do
+      if int_alGetError() then print "OpenAL: failed to generate auxiliary buffers": exit do
       alGenSources( 1 , @.iSource )
-      if alGetError() then exit do    
-      .dwMagic = cvi("WvOS") 
+      if int_alGetError() then print "OpenAL: failed to generate source":exit do    
+      .dwMagic = cvl("WvOS") 
       .iFmtOut = iSamFmt
       .iFrequency = iHZ : .iBits = iBits: .iChan = iChan
       .iBuffers = iBuffers : .iCurBuf = 0 
@@ -103,7 +106,7 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
 
 end function
 function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as integer ) as integer
-  if pWave=null orelse pWave->dwMagic <> cvi("WvOS") then return 0
+  if pWave=null orelse pWave->dwMagic <> cvl("WvOS") then return 0
   
   dim as any ptr pFreeBuffer 
   dim as ushort ptr pzFinalBuff = pzBuff
@@ -184,19 +187,19 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
       do
         dim as aluint iBuffersDone
         alGetSourcei( .iSource , AL_BUFFERS_PROCESSED , @iBuffersDone)          
-        if alGetError() then exit do      
+        if int_alGetError() then exit do      
         for N as integer = 0 to iBuffersDone-1
           alSourceUnqueueBuffers( .iSource , 1 , .piBuffers+.iOldBuffer )  
-          if alGetError() then exit do
+          if int_alGetError() then exit do
           .iOldBuffer = (.iOldBuffer+1) mod .iBuffers: .iBufferCount -= 1
         next N      
       loop while .iBufferCount = .iBuffers
       'if .iBufferCount = .iBuffers then return -1
       if iSz then        
         alBufferData( .piBuffers[.iCurBuf] , .iFmtOut , pzFinalBuff , iFinalSz , .iFrequency )
-        if alGetError() then exit do        
+        if int_alGetError() then exit do        
         alSourceQueueBuffers( .iSource , 1 , .piBuffers+.iCurBuf )
-        if alGetError() then exit do        
+        if int_alGetError() then exit do        
         .iCurBuf = (.iCurBuf+1) mod .iBuffers : .iBufferCount += 1    
         if .iBufferCount=1 then alSourcePlay( .iSource )
       end if
@@ -209,16 +212,16 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
   
 end function
 sub AudioWaitBuffers( pWave as WaveOutStruct ptr)
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
   with *pWave    
     do
       dim as aluint iBuffersDone
       alGetSourcei( .iSource , AL_BUFFERS_PROCESSED , @iBuffersDone)          
-      if alGetError() then exit sub
+      if int_alGetError() then exit sub
       if iBuffersDone < .iBufferCount then sleep 1,1: continue do           
       for N as integer = 0 to iBuffersDone-1
         alSourceUnqueueBuffers( .iSource , 1 , .piBuffers+.iOldBuffer )  
-        if alGetError() then exit do
+        if int_alGetError() then exit do
         .iOldBuffer = (.iOldBuffer+1) mod .iBuffers: .iBufferCount -= 1
       next N      
       exit sub
@@ -226,7 +229,7 @@ sub AudioWaitBuffers( pWave as WaveOutStruct ptr)
   end with
 end sub
 sub AudioClose( byref pWave as WaveOutStruct ptr )  
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
   AudioWaitBuffers( pWave )
   with *pWave    
     if .piBuffers andalso .piBuffers[0] then alDeleteBuffers( .iBuffers , .piBuffers )
