@@ -33,7 +33,7 @@ dim shared as long iCfgFileDump=0, iCfgPack=-1, iCfgDoPlay, iCfgPartSz = 1024
 dim shared as long iCfgVerbose = vlMaximum, iCfgAudioDevice=-1, iCfgInteractive=-1
 dim shared as long iCfgOutputSpeakers = 1
 
-iCfgDouble=2:iCfgPack=1:iCfgOutputSpeakers=-1
+'iCfgDouble=2:iCfgPack=1:iCfgOutputSpeakers=-1
 
 dim shared as string sInputFile
 dim shared as long iBinFileSize, iConWid, iConHei, iOptLine
