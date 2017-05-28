@@ -79,8 +79,10 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
       if .piBuffers = 0 then print "OpenAL: failed to allocate buffers" :exit do
       .pTempBuff = callocate( 65536 )    
       if .pTempBuff = 0 then print "OpenAL: failed to allocate auxiliar buffer space": exit do
-      alGenBuffers( iBuffers , .piBuffers )
-      if int_alGetError() then print "OpenAL: failed to generate auxiliary buffers": exit do
+      for N as integer = 0 to iBuffers-1
+        alGenBuffers( 1 , .piBuffers+N )
+        if int_alGetError() then print "OpenAL: failed to generate auxiliary buffers": exit do
+      next N
       alGenSources( 1 , @.iSource )
       if int_alGetError() then print "OpenAL: failed to generate source":exit do    
       .dwMagic = cvl("WvOS") 
@@ -106,7 +108,9 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
 
 end function
 function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as integer ) as integer
-  if pWave=null orelse pWave->dwMagic <> cvl("WvOS") then return 0
+  if pWave=null orelse pWave->dwMagic <> cvl("WvOS") then 
+    print "OpenAL AudioWrite: bad handle": return 0
+  end if
   
   dim as any ptr pFreeBuffer 
   dim as ushort ptr pzFinalBuff = pzBuff
@@ -125,7 +129,7 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
           if iFinalSz > 65536 then 'Pre-Allocated Temp buffer
             pFreeBuffer = allocate(iFinalSz)
             pzFinalBuff = pFreeBuffer
-            if pzFinalBuff = 0 then return 0
+            if pzFinalBuff = 0 then print "OpenAL AudioWrite: failed to allocate extra buffer": return 0
           end if
           select case .iChan
           case -2 'Back Stereo
@@ -156,7 +160,7 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
           if iFinalSz > 65536 then 'Pre-Allocated Temp buffer
             pFreeBuffer = allocate(iFinalSz)
             pzFinalBuff = pFreeBuffer
-            if pzFinalBuff = 0 then return 0
+            if pzFinalBuff = 0 then print "OpenAL: failed to generate source": return 0
           end if
           select case .iChan
           case -2 'Back Stereo
@@ -187,19 +191,29 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
       do
         dim as aluint iBuffersDone
         alGetSourcei( .iSource , AL_BUFFERS_PROCESSED , @iBuffersDone)          
-        if int_alGetError() then exit do      
+        if int_alGetError() then print "OpenAL: error querying buffer count":exit do      
         for N as integer = 0 to iBuffersDone-1
           alSourceUnqueueBuffers( .iSource , 1 , .piBuffers+.iOldBuffer )  
-          if int_alGetError() then exit do
+          if int_alGetError() then print "OpenAL: error releasing buffer":exit do
           .iOldBuffer = (.iOldBuffer+1) mod .iBuffers: .iBufferCount -= 1
-        next N      
-      loop while .iBufferCount = .iBuffers
+        next N 
+        if .iBufferCount = .iBuffers then sleep 1,1: continue do
+        exit do
+      loop
       'if .iBufferCount = .iBuffers then return -1
       if iSz then        
-        alBufferData( .piBuffers[.iCurBuf] , .iFmtOut , pzFinalBuff , iFinalSz , .iFrequency )
-        if int_alGetError() then exit do        
+        do
+          alBufferData( .piBuffers[.iCurBuf] , .iFmtOut , pzFinalBuff , iFinalSz , .iFrequency )
+          var iTries=0, iResult = int_alGetError()
+          if iResult then 
+            iTries += 1
+            print iTries & " - OpenAL: error buffering data error: 0x"+hex$(iResult)            
+            sleep 50,1: continue do
+          end if
+          exit do
+        loop
         alSourceQueueBuffers( .iSource , 1 , .piBuffers+.iCurBuf )
-        if int_alGetError() then exit do        
+        if int_alGetError() then print "OpenAL: error adding buffer to queue":exit do        
         .iCurBuf = (.iCurBuf+1) mod .iBuffers : .iBufferCount += 1    
         if .iBufferCount=1 then alSourcePlay( .iSource )
       end if
