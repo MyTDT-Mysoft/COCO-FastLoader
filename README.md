@@ -20,6 +20,7 @@ Compiling:
   sndforce_mmsystem  (win32 only)
   sndforce_libao
   sndforce_openal
+  sndforce_portaudio
 
   example: fbc FastLoad.bas -d sndforce_libao
   
