@@ -3,9 +3,9 @@ COCO Loader trough Audio sound card... to achieve rates over 1600 bytes/s (norma
 
 ## Compiling:
 
-  To compile it you need freebasic installed... (preferable 32bit)
+  To compile it you need [FreeBASIC](http://www.freebasic.net/) installed... (preferable 32bit)
   and may need LibAO, OpenAL or PortAudio installed to get sound for linux...
-  (i'm having bad results with LibAO,OpenAL under 64bit right now)
+  (i'm having bad results with LibAO under 64bit right now, and OpenAL limiting to 44khz maximum)
 
   and so compiling is trivial...
   
@@ -65,7 +65,7 @@ COCO Loader trough Audio sound card... to achieve rates over 1600 bytes/s (norma
   and OpenAL seems to fail at that by limiting the maximum rate one can achieve... (harcoded? the lib must be recompiled?)
   so PortAudio,libAO or mmsystem must be used for such...
   
-  the 6809 source asm files (or bin) are not required (in fact only the binary and possible .dll/.so depends are required)
+  the 6809 source asm files (or bin) are not required (in fact only the binary and possible .dll/.so dependencies are required)
   but so they were compiled with LWTOOLS emitted as hex bytes, and hardcoded into the fastload as an array...
   but any modification to that requires changing some parts of them that are dynamic modified by the FastLoader
   to provide compression... and double speed... and so on...
