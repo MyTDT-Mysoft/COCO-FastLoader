@@ -1,47 +1,45 @@
 # COCO-FastLoader
-COCO Loader trouch Audio sound card... to achieve rates over 1600 bytes/s (normal) and over 3200 bytes/s (double clock) (increases even more with compression)
+COCO Loader trough Audio sound card... to achieve rates over 1600 bytes/s (normal) and over 3200 bytes/s (double clock) (increases even more with compression)
 
-Compiling:
+## Compiling:
 
   To compile it you need freebasic installed... (preferable 32bit)
-  and may need LibAO or OpenAL installed to get sound for linux...
-  (i'm having bad results with those under 64bit right now)
+  and may need LibAO, OpenAL or PortAudio installed to get sound for linux...
+  (i'm having bad results with LibAO,OpenAL under 64bit right now)
 
   and so compiling is trivial...
   
-  fbc FastLoad.bas
+  `fbc FastLoad.bas`
   
   ...or in case you want to use GCC backend
   
-  fbc -gen gcc -O 3 -asm intel FastLoad.bas
+  `fbc -gen gcc -O 3 -asm intel FastLoad.bas`
   
-  optionally one of these can be defined with -d name to force a specific backend
+  optionally one of these can be defined with `-d name` to force a specific backend
   
-  sndforce_mmsystem  (win32 only)
-  sndforce_libao
-  sndforce_openal
-  sndforce_portaudio
-
-  example: fbc FastLoad.bas -d sndforce_libao
+  * sndforce_mmsystem  (win32 only)
+  * sndforce_libao
+  * sndforce_openal
+  * sndforce_portaudio
+  
+  example: `fbc FastLoad.bas -d sndforce_libao`
   
   would force LibAO to be used as sound backed (requiring LibAO.dll on windows)
+
+## Usage:  
   
-  
-  
-Usage:  
-  
-  FastLoad -h
+  `FastLoad -h`
   
   to get a list of possible options.... 
   the format of options is always -O#
   where "O" is the option char (case insensitive) 
   and # is a single digit number for options that require a parameter  
   
-  FastLoad -p file.bin
+  `FastLoad -p file.bin`
   
   would start loading file.bin trough the sound card...
   
-  FastLoad -p -w file.bin
+  `FastLoad -p -w file.bin`
   
   would load file.bin trough the sound card... and generate a file.bin.wav
   -w can be used alone to just generate it...
@@ -65,7 +63,7 @@ Usage:
   
   the double rate mode works even on COCO-II... but to use it you need a card that support 58khz or 88khz
   and OpenAL seems to fail at that by limiting the maximum rate one can achieve... (harcoded? the lib must be recompiled?)
-  so libaO or mmsystem must be used for such...
+  so PortAudio,libAO or mmsystem must be used for such...
   
   the 6809 source asm files (or bin) are not required (in fact only the binary and possible .dll/.so depends are required)
   but so they were compiled with LWTOOLS emitted as hex bytes, and hardcoded into the fastload as an array...
