@@ -18,15 +18,22 @@
     #include "Modules\Snd-OpenAL.bas"    
     #print " Compiling with 'OpenAL' sound library (forced)"
   #endif
-#endif  
+#endif
+#ifdef sndforce_portaudio
+  #ifndef SndOk
+    #define SndOk
+    #include "Modules\Snd-PortAudio.bas"
+    #print " Compiling with 'PortAudio' sound library (forced)"
+  #endif
+#endif
 
 #ifndef SndOk
   #ifdef __FB_WIN32__  
     #include "Modules\Snd-w32-mmsystem.bas"
     '#print " Compiling with 'mmsystem' sound library"
   #else  
-    #include "Modules\Snd-OpenAL.bas"
-    '#print " Compiling with 'OpenAL' sound library"
+    #include "Modules\Snd-PortAudio.bas"
+    '#print " Compiling with 'PortAudio' sound library"
   #endif
 #endif
 

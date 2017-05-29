@@ -12,7 +12,7 @@ type StereoSample
 end type
 #endif
 type WaveOutStruct
-  dwMagic as dword  'cvi("WvOS")
+  dwMagic as dword  'cvl("WvOS")
   hWave as HWAVEOUT
   iBuffers as integer  
   iCurBuf as integer  
@@ -62,7 +62,7 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
   with *pResult
     .ppWaves = callocate( sizeof(WAVEHDR)*iBuffers )
     if .ppWaves = 0 then WaveOutClose( hResult ): deallocate( pResult )
-    .dwMagic = cvi("WvOS") : .hWave = hResult
+    .dwMagic = cvl("WvOS") : .hWave = hResult
     .iBuffers = iBuffers : .iCurBuf = 0
   end with
   
@@ -70,7 +70,7 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
 
 end function
 function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as integer ) as integer
-  if pWave=null orelse pWave->dwMagic <> cvi("WvOS") then return 0
+  if pWave=null orelse pWave->dwMagic <> cvl("WvOS") then return 0
   
   with *pWave  
     'possible wait for front buffer to finish
@@ -98,7 +98,7 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as int
 
 end function
 sub AudioWaitBuffers( pWave as WaveOutStruct ptr)
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
   with *pWave    
     for N as integer = 0 to .iBuffers-1
       while AudioWrite( pWave , 0 , 0 )=-1
@@ -108,7 +108,7 @@ sub AudioWaitBuffers( pWave as WaveOutStruct ptr)
   end with
 end sub
 sub AudioClose( byref pWave as WaveOutStruct ptr )
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
   with *pWave
     for N as integer = 0 to .iBuffers-1
       while AudioWrite( pWave , 0 , 0 )=-1

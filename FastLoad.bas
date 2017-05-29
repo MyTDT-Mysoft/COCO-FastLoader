@@ -1,4 +1,5 @@
-#define fbc -gen gcc -O 3 -asm intel
+#define fbc -g -gen gcc -O 3 -asm intel -d sndforce_portaudio
+'-d sndforce_openal
 '-x F:\FB15\Projetos\Emulators\CP-400\Roms\FastLoad.exe
 
 #include "crt.bi"

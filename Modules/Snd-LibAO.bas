@@ -1,7 +1,7 @@
 #include "..\inc\ao.bi"
 
 type WaveOutStruct
-  dwMagic as ulong  'cvi("WvOS")
+  dwMagic as ulong  'cvl("WvOS")
   hWave as ao_device ptr
   iBuffers as long  
   iCurBuf as long  
@@ -61,7 +61,7 @@ function AudioOpen( iHz as long = 44100 , iBits as long = 16, iChan as long = 2,
     '.ppWaves = callocate( sizeof(WAVEHDR)*iBuffers )
     'if .ppWaves = 0 then WaveOutClose( hResult ): deallocate( pResult )
     .ppWaves = null
-    .dwMagic = cvi("WvOS") : .hWave = hResult
+    .dwMagic = cvl("WvOS") : .hWave = hResult
     .iBuffers = iBuffers : .iCurBuf = 0
     
   end with
@@ -72,7 +72,7 @@ function AudioOpen( iHz as long = 44100 , iBits as long = 16, iChan as long = 2,
 
 end function
 function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as long ) as long
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then return 0
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then return 0
   
   with *pWave  
     ao_play(.hWave, pzBuff, iSz)
@@ -81,13 +81,13 @@ function AudioWrite( pWave as WaveOutStruct ptr , pzBuff as any ptr , iSz as lon
 
 end function
 sub AudioWaitBuffers( pWave as WaveOutStruct ptr)
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
   with *pWave    
     exit sub
   end with
 end sub
 sub AudioClose( byref pWave as WaveOutStruct ptr )
-  if pWave=0 orelse pWave->dwMagic <> cvi("WvOS") then exit sub
+  if pWave=0 orelse pWave->dwMagic <> cvl("WvOS") then exit sub
    DebugShowLine()
   AudioWaitBuffers(pWave)
    DebugShowLine()
