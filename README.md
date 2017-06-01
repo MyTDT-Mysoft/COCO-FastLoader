@@ -4,7 +4,7 @@ COCO Loader trough Audio sound card... to achieve rates over 1600 bytes/s (norma
 ![Youtube video preview](https://i.ytimg.com/vi/2GGTDwDIgDQ/hqdefault.jpg?sqp=-oaymwEWCKgBEF5IWvKriqkDCQgBFQAAiEIYAQ==&rs=AOn4CLD1Vk4BjYQR4BsdgfyIUEM3lq-q1w)
 https://www.youtube.com/watch?v=peieARzk3bg
 
-/play secret
+:checkered_flag:
 
 ## Compiling:
 
