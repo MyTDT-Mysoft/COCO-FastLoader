@@ -1,6 +1,9 @@
 # COCO-FastLoader
 COCO Loader trough Audio sound card... to achieve rates over 1600 bytes/s (normal) and over 3200 bytes/s (double clock) (increases even more with compression)
 
+https://www.youtube.com/watch?v=peieARzk3bg
+![Youtube video preview](https://i.ytimg.com/vi/2GGTDwDIgDQ/hqdefault.jpg?sqp=-oaymwEWCKgBEF5IWvKriqkDCQgBFQAAiEIYAQ==&rs=AOn4CLD1Vk4BjYQR4BsdgfyIUEM3lq-q1w)
+
 ## Compiling:
 
   To compile it you need [FreeBASIC](http://www.freebasic.net/) installed... (preferable 32bit)
