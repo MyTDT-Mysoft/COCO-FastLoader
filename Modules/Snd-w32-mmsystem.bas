@@ -43,10 +43,11 @@ function AudioOpen( iHz as integer = 44100 , iBits as integer = 16, iChan as int
     .Samples.wValidBitsPerSample = 0 '? tWaveFmt.Format.wBitsPerSample
     with .Format
       .wFormatTag = WAVE_FORMAT_EXTENSIBLE        
-      .nSamplesPerSec = iHz   '44.1khz
-      .wBitsPerSample = iBits '16
-      .nChannels      = iChan 'mono,stereo
-      .nBlockAlign    = (.nChannels*.wBitsPerSample)\8
+      .nSamplesPerSec  = iHz   '44.1khz
+      .wBitsPerSample  = iBits '16
+      .nChannels       = iChan 'mono,stereo
+      .nBlockAlign     = (.nChannels*.wBitsPerSample)\8
+      .nAvgBytesPerSec = .nSamplesPerSec*.nBlockAlign
       .cbSize = sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WaveFormatEx)    
     end with
   end with
